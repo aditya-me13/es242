@@ -1,5 +1,5 @@
 #include "test.h"
-
+#include <stdbool.h>
 #include <string.h> // for testing generate_splits()
 
 /*
@@ -12,18 +12,40 @@
  */
 void generate_selections(int a[], int n, int k, int b[], void *data, void (*process_selection)(int *b, int k, void *data))
 {
-    b[0] = 2; b[1] = 1;
-    process_selection(b, 2, data);
-    b[0] = 2; b[1] = 6;
-    process_selection(b, 2, data);
-    b[0] = 2; b[1] = 5;
-    process_selection(b, 2, data);
-    b[0] = 1; b[1] = 6;
-    process_selection(b, 2, data);
-    b[0] = 1; b[1] = 5;
-    process_selection(b, 2, data);
-    b[0] = 6; b[1] = 5;
-    process_selection(b, 2, data);
+    // b[0] = 2; b[1] = 1;
+    // process_selection(b, 2, data);
+    // b[0] = 2; b[1] = 6;
+    // process_selection(b, 2, data);
+    // b[0] = 2; b[1] = 5;
+    // process_selection(b, 2, data);
+    // b[0] = 1; b[1] = 6;
+    // process_selection(b, 2, data);
+    // b[0] = 1; b[1] = 5;
+    // process_selection(b, 2, data);
+    // b[0] = 6; b[1] = 5;
+    // process_selection(b, 2, data);
+
+    static int selected = 0; // Keep track of the number of selected elements
+    static int index = 0;   // Keep track of the current index in the array
+
+    if (selected == k) {
+        process_selection(b, k, data); // Process the selection
+        return;
+    }
+
+    if (index >= n) {
+        return; // Not enough elements left to select from
+    }
+
+    // Include the current element in the selection
+    b[selected] = a[index];
+    ++selected;
+    ++index;
+    generate_selections(a, n, k, b, data, process_selection);
+
+    // Skip the current element and generate selections without it
+    --selected;
+    generate_selections(a, n, k, b, data, process_selection);
 }
 
 /*
@@ -34,26 +56,116 @@ void generate_selections(int a[], int n, int k, int b[], void *data, void (*proc
  * The dictionary parameter is an array of words, sorted in dictionary order.
  * nwords is the number of words in this dictionary.
  */
-void generate_splits(const char *source, const char *dictionary[], int nwords, char buf[], void *data, void (*process_split)(char buf[], void *data))
-{
-    strcpy(buf, "art is toil");
-    process_split(buf, data);
-    strcpy(buf, "artist oil");
-    process_split(buf, data);
+// void generate_splits(const char *source, const char *dictionary[], int nwords, char buf[], void *data, void (*process_split)(char buf[], void *data))
+// {
+//     // strcpy(buf, "art is toil");
+//     // process_split(buf, data);
+//     // strcpy(buf, "artist oil");
+//     // process_split(buf, data);
+// }
+
+
+int binarySearch(const char *word, const char *dictionary[], int nwords) {
+    int left = 0;
+    int right = nwords - 1;
+
+    while (left <= right) {
+        int mid = left + (right - left) / 2;
+        int cmp = strcmp(word, dictionary[mid]);
+
+        if (cmp == 0) {
+            // Word found in the dictionary at index 'mid'
+            return 1;
+        } else if (cmp < 0) {
+            // Word is in the left half of the dictionary
+            right = mid - 1;
+        } else {
+            // Word is in the right half of the dictionary
+            left = mid + 1;
+        }
+    }
+
+    // Word not found in the dictionary
+    return 0;
 }
+
+// Recursive function to generate and process all possible splits
+void generate_and_process_splits(const char *source, const char *dictionary[], int nwords, char buf[], int bufIndex, void *data, void (*process_split)(char buf[], void *data)) {
+    // Base case: If the source is empty, call process_split and return.
+    if (source[0] == '\0') {
+        process_split(buf, data);
+        return;
+    }
+
+    // Iterate through the source string and try different splits.
+    for (int i = 1; source[i - 1] != '\0'; i++) {
+        // Copy a part of the source string into buf.
+        strncpy(buf + bufIndex, source, i);
+        buf[bufIndex + i] = '\0';
+
+        // Check if buf is a valid word in the dictionary.
+        if (binarySearch(buf + bufIndex, dictionary, nwords)) {
+            // Recursively generate splits for the remaining part of the source.
+            generate_and_process_splits(source + i, dictionary, nwords, buf, bufIndex + i, data, process_split);
+        }
+    }
+}
+
+// Function to initiate the generation of splits
+void generate_splits(const char *source, const char *dictionary[], int nwords, char buf[], void *data, void (*process_split)(char buf[], void *data)) {
+    generate_and_process_splits(source, dictionary, nwords, buf, 0, data, process_split);
+}
+
+
 
 /*
  * Transform a[] so that it becomes the previous permutation of the elements in it.
  * If a[] is the first permutation, leave it unchanged.
  */
-void previous_permutation(int a[], int n)
-{
-    a[0] = 1;
-    a[1] = 5;
-    a[2] = 4;
-    a[3] = 6;
-    a[4] = 3;
-    a[5] = 2;
+void swap(int *a, int *b) {
+    int temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+// Function to reverse the elements in the array from start to end
+void reverse(int a[], int start, int end) {
+    while (start < end) {
+        swap(&a[start], &a[end]);
+        start++;
+        end--;
+    }
+}
+
+// Function to find the previous permutation of an array
+void previous_permutation(int a[], int n) {
+
+//     a[0] = 1;
+//     a[1] = 5;
+//     a[2] = 4;
+//     a[3] = 6;
+//     a[4] = 3;
+//     a[5] = 2;
+
+    int i = n - 2;
+
+    // Find the first index i such that a[i] > a[i+1]
+    while (i >= 0 && a[i] <= a[i + 1]) {
+        i--;
+    }
+
+    if (i < 0) {
+        return;
+    }
+
+    int j = n - 1;
+    while (a[j] >= a[i]) {
+        j--;
+    }
+
+    swap(&a[i], &a[j]);
+
+    reverse(a, i + 1, n - 1);
 }
 
 /* Write your tests here. Use the previous assignment for reference. */
